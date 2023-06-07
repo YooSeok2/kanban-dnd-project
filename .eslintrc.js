@@ -16,7 +16,6 @@ module.exports = {
     'jsx-a11y/click-events-have-key-events': 0,
     'max-depth': [2, 3],
     'max-len': [1, 150],
-    'max-lines-per-function': [1, { max: 160 }],
     'max-params': [1, { max: 4 }],
     'comma-style': [2, 'last'],
     'comma-spacing': [2, { before: false, after: true }],
