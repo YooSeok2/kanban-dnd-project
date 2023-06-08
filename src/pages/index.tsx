@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
-// import registDND from '../components/KanbanTodo.drag';
+import registDND from '../components/KanbanTodo.drag';
 
 export type TItemStatus = 'todo' | 'doing';
 
@@ -27,8 +27,8 @@ export default function Home() {
   });
   
   return (
-    <div className="p-4">
-      <div className="mt-4 flex">
+    <div className="px-60">
+      <div className="mt-6 flex">
         <div className="todo grid flex-1 select-none grid-cols-2 gap-4 rounded-lg">
           {Object.keys(items).map((key) => (
             <div
