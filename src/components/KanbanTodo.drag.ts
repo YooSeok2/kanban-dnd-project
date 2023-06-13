@@ -36,6 +36,11 @@ export type DropEvent = {
 };
 
 export default function registDND(onDrop: (event: DropEvent) => void) {
+  const clearDroppableShadow = () => {
+    document.querySelectorAll<HTMLElement>('[data-droppable-id]').forEach((element) => {
+      element.style.boxShadow = 'none';
+    });
+  };
   const handlerStart = (se: MouseEvent | TouchEvent) => {
     const item = (se.target as HTMLElement).closest<HTMLElement>('dnd-item');
     // item 자체가 없거나 현재 이벤트중인 item이 있을 경우 반환
@@ -43,13 +48,15 @@ export default function registDND(onDrop: (event: DropEvent) => void) {
     // 클릭한 item을 직접 움직일 수 없으니 고스트 아이템을 만들어서 활용한다.
     const ghostItem = item.cloneNode(true) as HTMLElement;
     // 초기 클릭했을 당시 아이템의 위치와 크기를 가져온다.
-    const { left, top, width, height } = item.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+
+    // 고스트 아이템을 생성한다
     ghostItem.classList.add('ghost');
     ghostItem.style.position = 'fixed';
-    ghostItem.style.left = `${left}px`;
-    ghostItem.style.top = `${top}px`;
-    ghostItem.style.width = `${width}px`;
-    ghostItem.style.height = `${height}px`;
+    ghostItem.style.left = `${itemRect.left}px`;
+    ghostItem.style.top = `${itemRect.top}px`;
+    ghostItem.style.width = `${itemRect.width}px`;
+    ghostItem.style.height = `${itemRect.height}px`;
     ghostItem.style.pointerEvents = 'none';
     ghostItem.style.border = '2px solid rgb(96 165 250)';
     ghostItem.style.opacity = '0.95';
@@ -60,15 +67,78 @@ export default function registDND(onDrop: (event: DropEvent) => void) {
     item.classList.add('placeholder');
     item.style.cursor = 'grabbing';
 
+    // 생성한 고스트아이템을 body에 추가한다.
     document.body.appendChild(ghostItem);
     // ghostitem이 아닌 다른 아이템은 밀리거나 할 때 자연스럽게 보이도록 에니메이션 추가
     document.querySelectorAll<HTMLElement>('.dnd-item:not(.ghost)').forEach((item) => {
       item.style.transition = 'all 200ms ease';
     });
 
+    // onDrop에 넘겨줄 변수 정의
+    let destination: HTMLElement | null | undefined;
+    let destinationItem: HTMLElement | null | undefined;
+    let destinationIndex: number;
+    let destinationDroppableId: string;
+
+    const source = item.closest<HTMLElement>('[data-droppable-id]');
+    if (!source) return console.warn('Need `data-droppable-id` at dnd-item parent');
+    if (!item.dataset.index) return console.warn('Need `data-index` at dnd-item');
+    // 다른 보드로 이동시 생성하는 임시 sourceItem
+    let movingItem: HTMLElement;
+    const sourceIndex = Number(item.dataset.index);
+    const sourceDroppableId = source.dataset.droppableId!;
+
     const moveHandler = (me: MouseEvent | TouchEvent) => {
       // touch 이벤트 중 scrollevent가 겹쳐서 발생하지 않도록 방지
       if (me.cancelable) me.preventDefault();
+      
+      // 이동중인 요소의 위치를 가져온다
+      const { deltaX, deltaY } = getDelta(se, me);
+      // 고스트 아이템을 이동시킨다.
+      ghostItem.style.top = `${itemRect.top + deltaY}px`;
+      ghostItem.style.left = `${itemRect.left + deltaX}px`;
+
+      // 이동중인 고스트아이템 영역 확인
+      const ghostItemRect = ghostItem.getBoundingClientRect();
+
+       // 중앙점을 기준으로 Drop 영역을 확인한다.
+       const pointTarget = document.elementFromPoint(
+        // 중앙점 계산법 (left + width / 2, top + height / 2)
+        ghostItemRect.left + ghostItemRect.width / 2,
+        ghostItemRect.top + ghostItemRect.height / 2,
+      );
+      
+      const currentDestinationItem = pointTarget?.closest<HTMLElement>('.dnd-item');
+      const currentDestination = pointTarget?.closest<HTMLElement>('[data-droppable-id]');
+      const currentDestinationDroppableId = currentDestination?.dataset.droppableId;
+      const currentDestinationIndex = Number(currentDestinationItem?.dataset.index);
+
+      const currentSourceItem = movingItem ?? item;
+      const currentSourceIndex = Number(currentSourceItem.dataset.index);
+      const currentSource = currentSourceItem.closest<HTMLElement>('[data-droppable-id]')!;
+      const currentSourceDroppableId = currentSource.dataset.droppableId;
+
+      // active 상태의 droppable box에 박스 쉐도우 효과 주고 아닌 곳은 제거
+      clearDroppableShadow();
+      if (currentDestination) {
+        currentDestination.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+      }
+
+      // 만약 타겟 엘리먼트가 같은 위치에 있거나 이동중이라면 이후 동작을 수행하지 않는다.
+      if (
+        currentDestinationItem?.isSameNode(currentSourceItem) ||
+        currentDestinationItem?.classList.contains('moving')
+      ) {
+        return;
+      }
+
+      if ( // 다른 보드로 이동할 경우에 로직
+        currentDestination &&
+        currentDestinationDroppableId &&
+        currentDestinationDroppableId !== currentSourceDroppableId
+      ) {
+
+      }
     }
   }
 }
