@@ -137,8 +137,31 @@ export default function registDND(onDrop: (event: DropEvent) => void) {
         currentDestinationDroppableId &&
         currentDestinationDroppableId !== currentSourceDroppableId
       ) {
+        // react에서 element의 dom을 직접으로 움직이는건 불가능하니 movingItem을 생성하여
+        // 다른 보드에 추가시키고 기존의 아이템은 제거한다.
+        if (!movingItem){
+          movingItem = item.cloneNode(true) as HTMLElement;
+          item.style.display = 'none';
+        }
+        currentDestination.appendChild(movingItem);
+        // 이동된 보드를 기준으로 도착지 정보를 갱신한다.
+        destination = currentDestination;
+        destinationDroppableId = currentDestinationDroppableId;
+        destinationIndex = currentDestination.querySelectorAll('.dnd-item').length-1;
 
+        // 아이템이 이동되었으므로 각 보드들의 아이템 index를 다시 갱신한다.
+        currentDestination.querySelectorAll<HTMLElement>('.dnd-item').forEach((ele, index) => {
+          ele.dataset.index = index + '';
+          ele.style.transform = '';
+          ele.classList.remove('moved');
+        });
+        currentSource.querySelectorAll<HTMLElement>('.dnd-item').forEach((ele, index) => {
+          ele.dataset.index = index + '';
+          ele.style.transform = '';
+          ele.classList.remove('moved');
+        })
       }
+      
     }
   }
 }
