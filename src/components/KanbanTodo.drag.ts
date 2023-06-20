@@ -161,7 +161,66 @@ export default function registDND(onDrop: (event: DropEvent) => void) {
           ele.classList.remove('moved');
         })
       }
-      
+      // 위치를 바꿀 타겟이 없다면 이후 동작을 수행하지 않는다.
+      if (!currentDestinationItem) return;
+
+      // 아이템의 위치를 바꾸기 위해 이동되어어야할 거리를 구한다.
+      const ITEM_MARGIN = 12;
+      const eachItemDistance = itemRect.height + ITEM_MARGIN;
+
+      // 도착지 정보 갱신
+      destinationItem = currentDestinationItem;
+      destination = currentDestinationItem.closest<HTMLElement>('[data-droppable-id]');
+      destinationDroppableId = destination?.dataset.droppableId + '';
+
+      let indexDiff = currentDestinationIndex - currentSourceIndex;
+      // 위에서 아래로 간다면 (ex. index 1 -> 3)
+      const isForward = currentSourceIndex < currentDestinationIndex;
+      // 움직였던 item으로 다시 움직이는지 여부
+      const isDestinationMoved = destinationItem.classList.contains('moved');
+      if (isDestinationMoved) {
+        indexDiff = isForward ? indexDiff - 1 : indexDiff + 1;
+      }
+
+      destinationIndex = currentSourceIndex + indexDiff;
+
+      const transX = indexDiff * eachItemDistance;
+      currentSourceItem.style.transform = `translate3d(0, ${transX}px, 0)`;
+
+      // indexdiff 사이에 있는 아이템들 이동
+      let target = currentDestinationItem;
+      while (
+        target &&
+        target.classList.contains('dnd-item') &&
+        !target.classList.contains('moving')
+        ){
+          if (isDestinationMoved) {
+            target.style.transform = '';
+            target.classList.remove('moved');
+            target = (
+              isForward ? target.nextElementSibling : target.previousElementSibling
+            ) as HTMLElement;
+          } else {
+            target.style.transform = `translate3d(0, ${isForward ? -eachItemDistance : eachItemDistance}px, 0)`;
+            target.classList.add('moved');
+            target = (
+              isForward ? target.previousElementSibling : target.nextElementSibling
+            ) as HTMLElement;
+          }
+      }
+
+      currentDestinationItem.classList.add('moving');
+      currentDestinationItem.addEventListener(
+        'transitionend',
+        () => {
+          currentDestinationItem?.classList.remove('moving');
+        },
+        { once: true },
+      );
+      // 가끔 transitioned가 씹히는 경우가 발생하니 보완하기 위해 추가적으로 setTimeout으로 제거한다
+      setTimeout(() => {
+        currentDestinationItem?.classList.remove('moving');
+      }, 200);
     }
   }
 }
