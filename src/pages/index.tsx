@@ -25,6 +25,23 @@ export default function Home() {
     })),
     doing: [],
   });
+
+  useEffect(() => {
+    const clear = registDND(({ source, destination }) => {
+      if (!destination) return;
+
+      const scourceKey = source.droppableId as TItemStatus;
+      const destinationKey = destination.droppableId as TItemStatus;
+
+      setItems((items) => {
+        const _items = JSON.parse(JSON.stringify(items)) as typeof items;
+        const [targetItem] = _items[scourceKey].splice(source.index, 1);
+        _items[destinationKey].splice(destination.index, 0, targetItem);
+        return _items;
+      });
+    });
+    return () => clear();
+  }, [setItems]);
   
   return (
     <div className="px-60">

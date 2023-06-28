@@ -222,5 +222,62 @@ export default function registDND(onDrop: (event: DropEvent) => void) {
         currentDestinationItem?.classList.remove('moving');
       }, 200);
     }
+    // 드래그가 끝났을 때
+    const endHandler = () => {
+      const sourceItem = movingItem ?? item;
+      item.classList.remove('placeholder');
+      movingItem?.classList.remove('placeholder');
+
+      // 초기에 지정한 document의 cursor를 초기화
+      document.body.removeAttribute('style');
+      clearDroppableShadow();
+
+      const itemRect = sourceItem.getBoundingClientRect();
+      ghostItem.classList.add('moving');
+      ghostItem.style.left = `${itemRect.left}px`;
+      ghostItem.style.top = `${itemRect.top}px`;
+      ghostItem.style.opacity = '1';
+      ghostItem.style.transform = 'none';
+      ghostItem.style.borderWidth = '0px';
+      ghostItem.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.15)';
+      ghostItem.style.transition = 'all 200ms ease';
+
+      ghostItem.addEventListener('transitionend', () => {
+        setTimeout(() => {
+          document.querySelectorAll<HTMLElement>('.dnd-item').forEach((item) => {
+            item.removeAttribute('style');
+            item.classList.remove('moving', 'moved');
+          });
+
+          item.classList.add('dnd-item');
+          item.removeAttribute('style');
+          movingItem?.remove();
+        }, 0);
+
+        ghostItem.remove();
+        console.log(
+          `result >> '${sourceDroppableId}': ${sourceIndex} -> '${destinationDroppableId}': ${destinationIndex}`,
+        );
+
+        onDrop({
+          source: {
+            droppableId: sourceDroppableId,
+            index: sourceIndex,
+          },
+          destination: destination
+            ? {
+                droppableId: destinationDroppableId,
+                index: destinationIndex,
+              }
+            : undefined,
+        });
+      }, 
+      {once: true});
+      document.removeEventListener(moveEventName, moveHandler);
+    }
+    document.addEventListener(moveEventName, moveHandler, { passive: false });
+    document.addEventListener(endEventName, endHandler, { once: true });
   }
+  document.addEventListener(startEventName, handlerStart);
+  return () => document.removeEventListener(startEventName, handlerStart);
 }
