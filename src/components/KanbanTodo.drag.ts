@@ -42,14 +42,28 @@ export default function registDND(onDrop: (event: DropEvent) => void) {
     });
   };
   const handlerStart = (se: MouseEvent | TouchEvent) => {
-    const item = (se.target as HTMLElement).closest<HTMLElement>('dnd-item');
+    const item = (se.target as HTMLElement).closest<HTMLElement>('.dnd-item');
     // item 자체가 없거나 현재 이벤트중인 item이 있을 경우 반환
     if (!item || item.classList.contains('moving')) return;
+
+    // onDrop에 넘겨줄 변수 정의
+    let destination: HTMLElement | null | undefined;
+    let destinationItem: HTMLElement | null | undefined;
+    let destinationIndex: number;
+    let destinationDroppableId: string;
+
+    const source = item.closest<HTMLElement>('[data-droppable-id]');
+    if (!source) return console.warn('Need `data-droppable-id` at dnd-item parent');
+    if (!item.dataset.index) return console.warn('Need `data-index` at dnd-item');
+    // 다른 보드로 이동시 생성하는 임시 sourceItem
+    let movingItem: HTMLElement;
+    const sourceIndex = Number(item.dataset.index);
+    const sourceDroppableId = source.dataset.droppableId!;
+
     // 클릭한 item을 직접 움직일 수 없으니 고스트 아이템을 만들어서 활용한다.
-    const ghostItem = item.cloneNode(true) as HTMLElement;
     // 초기 클릭했을 당시 아이템의 위치와 크기를 가져온다.
     const itemRect = item.getBoundingClientRect();
-
+    const ghostItem = item.cloneNode(true) as HTMLElement;
     // 고스트 아이템을 생성한다
     ghostItem.classList.add('ghost');
     ghostItem.style.position = 'fixed';
@@ -67,26 +81,13 @@ export default function registDND(onDrop: (event: DropEvent) => void) {
     item.classList.add('placeholder');
     item.style.cursor = 'grabbing';
 
+    document.body.style.cursor = 'grabbing';
     // 생성한 고스트아이템을 body에 추가한다.
     document.body.appendChild(ghostItem);
     // ghostitem이 아닌 다른 아이템은 밀리거나 할 때 자연스럽게 보이도록 에니메이션 추가
     document.querySelectorAll<HTMLElement>('.dnd-item:not(.ghost)').forEach((item) => {
       item.style.transition = 'all 200ms ease';
     });
-
-    // onDrop에 넘겨줄 변수 정의
-    let destination: HTMLElement | null | undefined;
-    let destinationItem: HTMLElement | null | undefined;
-    let destinationIndex: number;
-    let destinationDroppableId: string;
-
-    const source = item.closest<HTMLElement>('[data-droppable-id]');
-    if (!source) return console.warn('Need `data-droppable-id` at dnd-item parent');
-    if (!item.dataset.index) return console.warn('Need `data-index` at dnd-item');
-    // 다른 보드로 이동시 생성하는 임시 sourceItem
-    let movingItem: HTMLElement;
-    const sourceIndex = Number(item.dataset.index);
-    const sourceDroppableId = source.dataset.droppableId!;
 
     const moveHandler = (me: MouseEvent | TouchEvent) => {
       // touch 이벤트 중 scrollevent가 겹쳐서 발생하지 않도록 방지
@@ -161,6 +162,9 @@ export default function registDND(onDrop: (event: DropEvent) => void) {
           ele.classList.remove('moved');
         })
       }
+         console.log(
+        `'${currentSourceDroppableId}': ${currentSourceIndex} -> '${currentDestinationDroppableId}': ${currentDestinationIndex}`,
+      );
       // 위치를 바꿀 타겟이 없다면 이후 동작을 수행하지 않는다.
       if (!currentDestinationItem) return;
 
@@ -192,7 +196,7 @@ export default function registDND(onDrop: (event: DropEvent) => void) {
       while (
         target &&
         target.classList.contains('dnd-item') &&
-        !target.classList.contains('moving')
+        !target.classList.contains('placeholder')
         ){
           if (isDestinationMoved) {
             target.style.transform = '';
@@ -275,9 +279,11 @@ export default function registDND(onDrop: (event: DropEvent) => void) {
       {once: true});
       document.removeEventListener(moveEventName, moveHandler);
     }
+
     document.addEventListener(moveEventName, moveHandler, { passive: false });
     document.addEventListener(endEventName, endHandler, { once: true });
   }
+  
   document.addEventListener(startEventName, handlerStart);
   return () => document.removeEventListener(startEventName, handlerStart);
 }
